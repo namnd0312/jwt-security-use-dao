@@ -1,5 +1,6 @@
 package com.namnd.springjwtdao.model;
 
+import com.namnd.springjwtdao.dto.UserDTO;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -31,7 +32,8 @@ public class UserPrinciple implements UserDetails {
     public UserPrinciple() {
     }
 
-    public static UserPrinciple build(User user){
+
+    public static UserPrinciple build(UserDTO user){
         List<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(role -> new SimpleGrantedAuthority(role.getName()))
                 .collect(Collectors.toList());

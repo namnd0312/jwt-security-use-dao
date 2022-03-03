@@ -2,7 +2,9 @@ package com.namnd.springjwtdao.dao;
 
 import com.namnd.springjwtdao.dto.UserDTO;
 
-public interface UserDao {
+import java.io.Serializable;
+
+public interface UserDao extends Serializable, BaseDAO{
 
     UserDTO findByUserName(String userName);
 }

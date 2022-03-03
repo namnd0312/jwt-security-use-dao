@@ -6,7 +6,9 @@ import com.namnd.springjwtdao.dto.OrderDTO;
 import org.hibernate.Session;
 import org.hibernate.query.Query;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.persistence.EntityManager;
@@ -33,18 +35,18 @@ public abstract class AbstractBaseDAO implements BaseDAO {
     }
 
 
-    protected NamedParameterJdbcTemplate getNamedParameterJdbcTemplate(){
+    protected NamedParameterJdbcTemplate getNamedParameterJdbcTemplate() {
         return namedParameterJdbcTemplate;
     }
 
     /**
      * Search record per page and count total record by search condition
      *
-     * @param searchDTO search condition extends from SearchDTO
-     * @param sqlString query string build with search condition
+     * @param searchDTO  search condition extends from SearchDTO
+     * @param sqlString  query string build with search condition
      * @param parameters parameters passing to Query
      */
-    protected <T> void querySearchAndCount(BaseSearch searchDTO, String sqlString, Map<String, Object> parameters, Class<T>  clazz) {
+    protected <T> void querySearchAndCount(BaseSearch searchDTO, String sqlString, Map<String, Object> parameters, Class<T> clazz) {
         Query<T> query = getSession().createQuery(sqlString, clazz);
         searchAndCountTotal(searchDTO, sqlString, parameters, query);
     }
@@ -61,8 +63,8 @@ public abstract class AbstractBaseDAO implements BaseDAO {
     /**
      * Search record per page and count total record by search condition
      *
-     * @param searchDTO search condition extends from SearchDTO
-     * @param sqlString query string build with search condition
+     * @param searchDTO  search condition extends from SearchDTO
+     * @param sqlString  query string build with search condition
      * @param parameters parameters passing to Query
      */
     protected <T> void querySearchAndCount(BaseSearch searchDTO, String sqlString, Map<String, Object> parameters) {
@@ -70,7 +72,7 @@ public abstract class AbstractBaseDAO implements BaseDAO {
         searchAndCountTotal(searchDTO, sqlString, parameters, query);
     }
 
-    protected <T> void searchAndCountTotal(BaseSearch searchDTO, String sqlString, Map<String, Object> parameters, Class<T> clazz){
+    protected <T> void searchAndCountTotal(BaseSearch searchDTO, String sqlString, Map<String, Object> parameters, Class<T> clazz) {
         Long totalRecords = countNativeTotalRecords(sqlString, parameters);
         countPages(searchDTO, totalRecords);
         sqlString = getSqlPaging(searchDTO, sqlString, parameters);
@@ -86,13 +88,13 @@ public abstract class AbstractBaseDAO implements BaseDAO {
         searchDTO.setTotalRecords(totalRecords);
     }
 
-    protected long getOffset(BaseSearch searchDto){
-        if(searchDto.getPage() == 0)
+    protected long getOffset(BaseSearch searchDto) {
+        if (searchDto.getPage() == 0)
             return 0;
         return searchDto.getPage() * searchDto.getPageSize();
     }
 
-    private String getSqlPaging(BaseSearch searchDto, String sql, Map<String, Object> parameters){
+    private String getSqlPaging(BaseSearch searchDto, String sql, Map<String, Object> parameters) {
         StringBuilder sqlBuilder = new StringBuilder();
         sql = sql.replaceAll("(?i) from ", " from ");
         sqlBuilder.append(sql);
@@ -104,7 +106,8 @@ public abstract class AbstractBaseDAO implements BaseDAO {
 
     /**
      * countTotalRecords
-     * @param sqlString String query before build search option
+     *
+     * @param sqlString  String query before build search option
      * @param parameters this parameter passing to query
      * @return total records
      */
@@ -131,36 +134,52 @@ public abstract class AbstractBaseDAO implements BaseDAO {
         return ascending ? OrderDTO.ASC : OrderDTO.DESC;
     }
 
-    public <T> List<T> findAll(Class<T> clazz){
+    public <T> List<T> findAll(Class<T> clazz) {
         return getSession().createQuery("select t from " + clazz.getName() + " t", clazz).getResultList();
     }
-    public <T> Optional<T> findById(Serializable id, Class<T> clazz){
+
+    public <T> Optional<T> findById(Serializable id, Class<T> clazz) {
         return Optional.ofNullable(getSession().get(clazz, id));
     }
-    public <T> Serializable save(T entity){
+
+    public <T> Serializable save(T entity) {
         return getSession().save(entity);
     }
-    public <T> void update(T entity){
+
+    public <T> void update(T entity) {
         getSession().merge(entity);
     }
-    public <T> void delete(T entity){
+
+    public <T> void delete(T entity) {
         getSession().delete(entity);
     }
-    protected String containsString(String source){
+
+    protected String containsString(String source) {
         return "%" + source.replace("\\", "\\\\")
-            .replaceAll("%", "\\%")
-            .replaceAll("_", "\\_") + "%";
+                .replaceAll("%", "\\%")
+                .replaceAll("_", "\\_") + "%";
     }
 
-    protected String startWithString(String source){
+    protected String startWithString(String source) {
         return source.replace("\\", "\\\\")
-            .replaceAll("%", "\\%")
-            .replaceAll("_", "\\_") + "%";
+                .replaceAll("%", "\\%")
+                .replaceAll("_", "\\_") + "%";
     }
 
-    protected String endWithString(String source){
+    protected String endWithString(String source) {
         return "%" + source.replace("\\", "\\\\")
-            .replaceAll("%", "\\%")
-            .replaceAll("_", "\\_");
+                .replaceAll("%", "\\%")
+                .replaceAll("_", "\\_");
+    }
+
+
+    public <T> Optional<T>  queryForObject(String sql, Map<String, ?> paramMap, RowMapper<T> rowMapper) {
+        try {
+            return Optional.of(getNamedParameterJdbcTemplate().queryForObject(sql, paramMap,
+                    rowMapper));
+        } catch (
+                EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
     }
 }

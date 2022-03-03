@@ -1,13 +1,7 @@
 package com.namnd.springjwtdao.service;
 
-import com.namnd.springjwtdao.model.Role;
+import com.namnd.springjwtdao.model.UserRole;
 
 public interface RoleService {
-
-    void save(Role role);
-
-    Role findByName(String name);
-
-    //Đẩy thay đổi vào DB để query lại
-    void flush();
+    void saveUserRole(UserRole userRole);
 }

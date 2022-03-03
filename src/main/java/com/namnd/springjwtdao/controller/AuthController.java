@@ -4,8 +4,9 @@ import com.namnd.springjwtdao.dto.JwtResponseDto;
 import com.namnd.springjwtdao.dto.RegisterDto;
 import com.namnd.springjwtdao.dto.UserDTO;
 import com.namnd.springjwtdao.dto.mapper.RegisterDtoMapper;
-import com.namnd.springjwtdao.model.Role;
+import com.namnd.springjwtdao.model.ERole;
 import com.namnd.springjwtdao.model.User;
+import com.namnd.springjwtdao.model.UserRole;
 import com.namnd.springjwtdao.service.JwtService;
 import com.namnd.springjwtdao.service.RoleService;
 import com.namnd.springjwtdao.service.UserService;
@@ -17,11 +18,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
-import java.util.Set;
+import javax.transaction.Transactional;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -36,9 +35,6 @@ public class AuthController {
 
     @Autowired
     private RoleService roleService;
-
-    @Autowired
-    private PasswordEncoder encoder;
 
     @Autowired
     private JwtService jwtService;
@@ -60,37 +56,28 @@ public class AuthController {
 
         String jwt = jwtService.generateTokenLogin(authentication);
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        User currentUser = userService.findByUserName(user.getUsername()).get();
+        UserDTO currentUser = userService.findByUserName(user.getUsername());
         return ResponseEntity.ok(new JwtResponseDto(currentUser.getId(), jwt, userDetails.getUsername(), currentUser.getFullName(), userDetails.getAuthorities()));
     }
 
     @PostMapping("/register")
+    @Transactional
     public ResponseEntity<String> registerUser(@RequestBody RegisterDto registerDto) {
-        if(userService.existsByUsername(registerDto.getUsername())) {
+
+        UserDTO user = this.userService.findByUserName(registerDto.getUsername());
+
+        if(user != null) {
             return new ResponseEntity<String>("Fail -> Username is already taken!",
                     HttpStatus.BAD_REQUEST);
         }
 
-        Set<Role> roles = registerDto.getRoles();
+        User entity = registerDtoMapper.toEntity(registerDto);
+        Long userId = userService.save(entity);
 
-        for (Role role: roles) {
-            if(roleService.findByName(role.getName()) == null){
-                roleService.save(role);
-                roleService.flush();
-            }else {
-                role.setId(roleService.findByName(role.getName()).getId());
-            }
-        }
-
-        Optional<User> user = this.userService.findByUserName(registerDto.getUsername());
-
-        if(user.isPresent()){
-            return new ResponseEntity<String>("Fail -> Username is already taken!",
-                    HttpStatus.BAD_REQUEST);
-        }
-
-        User user1 = registerDtoMapper.toEntity(registerDto);
-        userService.save(user1);
+        UserRole userRole = new UserRole();
+        userRole.setUserId(userId);
+        userRole.setRoleId(ERole.ROLE_USER.getValue());
+        roleService.saveUserRole(userRole);
 
         return ResponseEntity.ok().body("User registered successfully!");
     }
@@ -98,7 +85,7 @@ public class AuthController {
     @GetMapping("/user")
     public ResponseEntity<?> getUser(@RequestParam String userName) {
 
-        UserDTO userDTO = this.userService.findUserByUserName(userName);
+        UserDTO userDTO = this.userService.findByUserName(userName);
 
         return ResponseEntity.ok().body(userDTO);
     }
